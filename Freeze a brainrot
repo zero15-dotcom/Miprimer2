@@ -1,36 +1,120 @@
-# This is a basic workflow to help you get started with Actions
 
-name: CI
 
-# Controls when the workflow will run
-on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+local Window = Rayfield:CreateWindow({
+    Name = "Freeze a brainrot",
+    LoadingTitle = "Brainrot Freezer",
+    LoadingSubtitle = "Made by zeroz560",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "FreezerTools",
+        FileName = "Config"
+    },
+    KeySystem = false
+})
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+local MainTab = Window:CreateTab("Main", 4483362458)
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+local player = game.Players.LocalPlayer
+local freezing = false
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+-- Encuentra brainrot MÁS CERCA
+local function findClosestBrainrot()
+    local brainrotsFolder = workspace:FindFirstChild("Brainrots")
+    if not brainrotsFolder then return nil end
+    
+    local char = player.Character
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    
+    local closest = nil
+    local minDist = math.huge
+    
+    for _, brainrot in pairs(brainrotsFolder:GetChildren()) do
+        local root = brainrot:FindFirstChild("HumanoidRootPart") 
+                   or brainrot.PrimaryPart 
+                   or brainrot:FindFirstChildWhichIsA("BasePart")
+        
+        if root and root:IsA("BasePart") then
+            local dist = (hrp.Position - root.Position).Magnitude
+            if dist < minDist then
+                minDist = dist
+                closest = root
+            end
+        end
+    end
+    
+    return closest
+end
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+-- Botón Auto Freezer (Toggle)
+MainTab:CreateButton({
+    Name = "Auto Freezer (Toggle)",
+    Callback = function()
+        if freezing then
+            freezing = false
+            Rayfield:Notify({Title = "Auto Freezer", Content = "Detenido", Duration = 3})
+            return
+        end
+        
+        freezing = true
+        Rayfield:Notify({Title = "Auto Freezer", Content = "Iniciado - Siguiendo closest brainrot", Duration = 4})
+        
+        spawn(function()
+            while freezing do
+                local targetRoot = findClosestBrainrot()
+                if targetRoot then
+                    local char = player.Character
+                    if char then
+                        local hrp = char:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            hrp.CFrame = targetRoot.CFrame + Vector3.new(0, 10, 0)
+                        end
+                    end
+                end
+                wait(0.1)
+            end
+        end)
+    end
+})
+
+
+MainTab:CreateButton({
+    Name = "Sell All",
+    Callback = function()
+        local success, err = pcall(function()
+            local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RemoteEvents")
+            local sellRemote = remotes:WaitForChild("SellItem")
+            sellRemote:FireServer()
+        end)
+        if success then
+            Rayfield:Notify({Title = "Sell All", Content = "¡Vendido todo!", Duration = 3})
+        else
+            Rayfield:Notify({Title = "Error Sell", Content = tostring(err), Duration = 4})
+        end
+    end
+})
+
+MainTab:CreateButton({
+    Name = "Purchase Podium",
+    Callback = function()
+        local success, err = pcall(function()
+            local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RemoteEvents")
+            local podiumRemote = remotes:WaitForChild("PurchasePodium")
+            podiumRemote:FireServer()
+        end)
+        if success then
+            Rayfield:Notify({Title = "Purchase Podium", Content = "¡Podium comprado!", Duration = 3})
+        else
+            Rayfield:Notify({Title = "Error Podium", Content = tostring(err), Duration = 4})
+        end
+    end
+})
+
+Rayfield:Notify({
+    Title = "¡Scripts cargados¡",
+    Content = "Disfruta el script",
+    Duration = 8
+})
